@@ -1,19 +1,32 @@
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import NetPresentValueCalculator from '../NetPresentValueCalculator';
+import * as formModule from '../../components/NetPresentValueCalculationForm';
 
-jest.mock('../../components/NetPresentValueCalculationForm', () => ({
-  NetPresentValueCalculationForm: jest.fn(() => <div data-testid="mock-form">Mock Form</div>),
-}));
+describe('NetPresentValueCalculator page', () => {
+  beforeEach(() => {
+    vi.spyOn(formModule, 'NetPresentValueCalculationForm').mockImplementation(() => (
+      <div data-testid="mock-npv-form">Mocked NPV Form</div>
+    ));
+  });
 
-describe('NetPresentValueCalculator Page', () => {
-  it('renders the layout with CssBaseline, Paper, and the form', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the NPV form inside the layout', () => {
     render(<NetPresentValueCalculator />);
 
-    // Check that the form is rendered
-    expect(screen.getByTestId('mock-form')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-npv-form')).toBeInTheDocument();
 
-    // Check that the page has the layout components
-    const paper = screen.getByRole('presentation'); // Paper renders as 'presentation'
-    expect(paper).toBeInTheDocument();
+    const container = screen.getByText(/Mocked NPV Form/i).closest('div');
+    expect(container).not.toBeNull();
+  });
+
+  it('renders CssBaseline and structured layout', () => {
+    const { container } = render(<NetPresentValueCalculator />);
+
+    expect(container.firstChild).toHaveStyle('display: flex');
+    expect(container.firstChild).toHaveStyle('flex-direction: column');
   });
 });

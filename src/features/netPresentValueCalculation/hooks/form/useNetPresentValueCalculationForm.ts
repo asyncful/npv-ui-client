@@ -4,7 +4,7 @@ import type { NetPresentValueCalculationResultModel } from '../../models/NetPres
 import type { NetPresentValueCalculationModel } from '../../models/NetPresentValueCalculationModel';
 
 type FormState = {
-  cashFlows: string; // comma-separated string from input field
+  cashFlows: string;
   lower: number;
   upper: number;
   increment: number;

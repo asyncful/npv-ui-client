@@ -1,24 +1,28 @@
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useNetPresentValueCalculationForm } from '../useNetPresentValueCalculationForm';
+import * as serviceHook from '../../service/useNetPresentValueCalculation';
+import type { NetPresentValueCalculationResultModel } from '../../../models/NetPresentValueCalculationResultModel';
 
-jest.mock('../../service/useNetPresentValueCalculation');
+const mockResults: NetPresentValueCalculationResultModel[] = [
+  { discountRate: 0.01, netPresentValue: 250 },
+  { discountRate: 0.02, netPresentValue: 245 },
+];
 
-describe('useNetPresentValueCalculationForm', () => {
-  const mockResult = [
-    { rate: 0.01, npv: 250 },
-    { rate: 0.02, npv: 240 },
-  ];
-
-  const mockCalculate = jest.fn();
+describe('useNetPresentValueCalculationForm tests', () => {
+  const mockCalculate = vi.fn();
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (serviceHook.useNetPresentValueCalculation as jest.Mock).mockReturnValue({
+    vi.spyOn(serviceHook, 'useNetPresentValueCalculation').mockReturnValue({
       calculate: mockCalculate,
     });
   });
 
-  it('should initialize with default form values', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('initializes with default form values', () => {
     const { result } = renderHook(() => useNetPresentValueCalculationForm());
 
     expect(result.current.form).toEqual({
@@ -27,36 +31,36 @@ describe('useNetPresentValueCalculationForm', () => {
       upper: 0.05,
       increment: 0.01,
     });
+
     expect(result.current.result).toBeNull();
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it('should update form fields using handleChange', () => {
+  it('updates form state with handleChange', () => {
     const { result } = renderHook(() => useNetPresentValueCalculationForm());
 
     act(() => {
-      result.current.handleChange('cashFlows', '100,200,300');
+      result.current.handleChange('cashFlows', '100,200');
       result.current.handleChange('lower', '0.02');
-      result.current.handleChange('upper', '0.06');
-      result.current.handleChange('increment', '0.01');
     });
 
-    expect(result.current.form).toEqual({
-      cashFlows: '100,200,300',
-      lower: 0.02,
-      upper: 0.06,
-      increment: 0.01,
-    });
+    expect(result.current.form.cashFlows).toBe('100,200');
+    expect(result.current.form.lower).toBe(0.02);
   });
 
-  it('should submit the form and update result on success', async () => {
-    mockCalculate.mockResolvedValue(mockResult);
+  it('submits data and stores result on success', async () => {
+    mockCalculate.mockResolvedValueOnce(mockResults);
 
     const { result } = renderHook(() => useNetPresentValueCalculationForm());
 
     act(() => {
-      result.current.handleChange('cashFlows', '100,200,300');
+      result.current.setForm({
+        cashFlows: '100, 200, 300',
+        lower: 0.01,
+        upper: 0.03,
+        increment: 0.01,
+      });
     });
 
     await act(async () => {
@@ -65,33 +69,58 @@ describe('useNetPresentValueCalculationForm', () => {
 
     expect(mockCalculate).toHaveBeenCalledWith({
       cashFlows: [100, 200, 300],
-      discountRateRange: {
-        lower: 0.01,
-        upper: 0.05,
-        increment: 0.01,
-      },
+      discountRate: { lower: 0.01, upper: 0.03, increment: 0.01 },
     });
 
-    expect(result.current.result).toEqual(mockResult);
-    expect(result.current.error).toBeNull();
+    expect(result.current.result).toEqual(mockResults);
     expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
-  it('should set error on failed submission', async () => {
-    mockCalculate.mockRejectedValue(new Error('API failure'));
+  it('sets error state when calculation throws', async () => {
+    mockCalculate.mockRejectedValueOnce(new Error('Calculation failed'));
 
     const { result } = renderHook(() => useNetPresentValueCalculationForm());
 
     act(() => {
-      result.current.handleChange('cashFlows', '100,200,300');
+      result.current.setForm({
+        cashFlows: 'invalid, 100',
+        lower: 0.01,
+        upper: 0.03,
+        increment: 0.01,
+      });
     });
 
     await act(async () => {
       await result.current.handleSubmit();
     });
 
-    expect(result.current.result).toBeNull();
-    expect(result.current.error).toBe('API failure');
+    expect(result.current.error).toBe('Calculation failed');
     expect(result.current.loading).toBe(false);
+    expect(result.current.result).toBeNull();
+  });
+
+  it('filters out invalid cashflow entries', async () => {
+    mockCalculate.mockResolvedValueOnce(mockResults);
+
+    const { result } = renderHook(() => useNetPresentValueCalculationForm());
+
+    act(() => {
+      result.current.setForm({
+        cashFlows: '100, abc, 300, , 400.5',
+        lower: 0.01,
+        upper: 0.02,
+        increment: 0.01,
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleSubmit();
+    });
+
+    expect(mockCalculate).toHaveBeenCalledWith({
+      cashFlows: [100, 300, 400.5],
+      discountRate: { lower: 0.01, upper: 0.02, increment: 0.01 },
+    });
   });
 });

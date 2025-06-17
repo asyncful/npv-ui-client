@@ -1,58 +1,66 @@
-// import { NetPresentValueApiClient } from "../clients/netPresentValueApiClient";
-// import type { NetPresentValueCalculationRequestDto } from "../dtos/NetPresentValueCalculationRequestDto";
-// import type { NetPresentValueCalculationResponseDto } from "../dtos/NetPresentValueCalculationResponseDto";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { NetPresentValueApiClient } from '../clients/NetPresentValueApiClient';
 
-// global.fetch = jest.fn(); // mock global fetch
+// Mocked DTOs
+const mockRequest = {
+  CashFlows: [100, 200, 300],
+  DiscountRateDetails: {
+    LowerBoundDiscountRate: 0.01,
+    UpperBoundDiscountRate: 0.05,
+    Increment: 0.01,
+  },
+};
 
-// describe('NetPresentValueApiClient', () => {
-//   const client = new NetPresentValueApiClient('http://test-api.com/api/npv');
+const mockResponse = {
+  Results: [
+    { DiscountRate: 0.01, NetPresentValue: 580 },
+    { DiscountRate: 0.02, NetPresentValue: 570 },
+  ],
+};
 
-//   const mockRequest: NetPresentValueCalculationRequestDto = {
-//     CashFlows: [100, 200, 300],
-//     DiscountRateDetails: {
-//       LowerBoundDiscountRate: 0.01,
-//       UpperBoundDiscountRate: 0.05,
-//       Increment: 0.01,
-//     },
-//   };
+describe('NetPresentValueApiClient tests', () => {
+  const apiClient = new NetPresentValueApiClient('http://localhost:7006/api/npv');
 
-//   const mockResponse: NetPresentValueCalculationResponseDto = {
-//     Results: [
-//       { DiscountRate: 0.01, NetPresentValue: 567 },
-//       { DiscountRate: 0.02, NetPresentValue: 543 },
-//     ],
-//   };
+  beforeEach(() => {
+    global.fetch = vi.fn();
+  });
 
-//   beforeEach(() => {
-//     (fetch as jest.Mock).mockClear();
-//   });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-//   it('calls the correct URL with proper payload and returns parsed result', async () => {
-//     (fetch as jest.Mock).mockResolvedValueOnce({
-//       ok: true,
-//       json: async () => mockResponse,
-//     });
+  it('sends a POST request and returns parsed response on success', async () => {
+    // Arrange
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    });
 
-//     const result = await client.calculateNetPresentValue(mockRequest);
+    // Act
+    const result = await apiClient.calculateNetPresentValue(mockRequest);
 
-//     expect(fetch).toHaveBeenCalledWith('http://test-api.com/api/npv/calculate', {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'application/json' },
-//       body: JSON.stringify(mockRequest),
-//     });
+    // Assert
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledWith('http://localhost:7006/api/npv/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mockRequest),
+    });
 
-//     expect(result).toEqual(mockResponse);
-//   });
+    expect(result).toEqual(mockResponse);
+  });
 
-//   it('throws an error when API response is not ok', async () => {
-//     (fetch as jest.Mock).mockResolvedValueOnce({
-//       ok: false,
-//       status: 500,
-//       statusText: 'Internal Server Error',
-//     });
+  it('throws an error if response is not ok', async () => {
+    // Arrange
+    (fetch as any).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    });
 
-//     await expect(client.calculateNetPresentValue(mockRequest)).rejects.toThrow(
-//       'Failed to calculate net present value'
-//     );
-//   });
-// });
+    // Act & Assert
+    await expect(apiClient.calculateNetPresentValue(mockRequest)).rejects.toThrow(
+      'Failed to calculate net present value'
+    );
+  });
+});

@@ -1,57 +1,60 @@
 import { renderHook, act } from '@testing-library/react';
-import { npvModelToRequestDto } from '../../../mappers/npvModelToRequestDto';
-import { npvResponseDtoToResultModel } from '../../../mappers/npvResponseDtoToResultModel';
-import { NetPresentValueApiClient } from '../../../api/clients/netPresentValueApiClient';
-import { useNetPresentValueCalculation } from '../useNetPresentValueCalculation';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useNetPresentValueCalculation } from '../useNetPresentValueCalculation'; // adjust path
+import { NetPresentValueApiClient } from '../../../api/clients/NetPresentValueApiClient';
+import * as requestMapper from '../../../mappers/npvModelToRequestDto';
+import * as responseMapper from '../../../mappers/npvResponseDtoToResultModel';
 
-jest.mock('../../../mappers/npvModelToRequestDto');
-jest.mock('../../../mappers/npvResponseDtoToResultModel');
-jest.mock('../../../api/clients/NetPresentValueApiClient');
+const mockModel = {
+  cashFlows: [100, 200],
+  discountRate: { lower: 0.01, upper: 0.03, increment: 0.01 },
+};
+
+const mockRequestDto = {
+  CashFlows: [100, 200],
+  DiscountRateDetails: {
+    LowerBoundDiscountRate: 0.01,
+    UpperBoundDiscountRate: 0.03,
+    Increment: 0.01,
+  },
+};
+
+const mockResponseDto = { 
+  Results: [
+    { DiscountRate: 0.01, NetPresentValue: 290 },
+    { DiscountRate: 0.02, NetPresentValue: 285 },
+  ],
+};
+
+const mockResultModel = [
+  { discountRate: 0.01, netPresentValue: 290 },
+  { discountRate: 0.02, netPresentValue: 285 },
+];
 
 describe('useNetPresentValueCalculation', () => {
-  const mockInputModel = {
-    cashFlows: [100, 200, 300],
-    discountRateRange: { lower: 0.01, upper: 0.05, increment: 0.01 },
-  };
-
-  const mockRequestDto = {
-    cashFlows: [100, 200, 300],
-    lowerBoundDiscountRate: 0.01,
-    upperBoundDiscountRate: 0.05,
-    increment: 0.01,
-  };
-
-  const mockResponseDto = { npvValues: [250, 220, 190] };
-
-  const mockResultModel = [{ rate: 0.01, npv: 250 }];
-
   beforeEach(() => {
-    // Reset mock state
-    jest.clearAllMocks();
+    vi.spyOn(requestMapper, 'npvModelToRequestDto').mockReturnValue(mockRequestDto);
+    vi.spyOn(responseMapper, 'npvResponseDtoToResultModel').mockReturnValue(mockResultModel);
 
-    // Setup mocked implementations
-    (npvModelToRequestDto as jest.Mock).mockReturnValue(mockRequestDto);
-    (npvResponseDtoToResultModel as jest.Mock).mockReturnValue(mockResultModel);
-
-    (NetPresentValueApiClient as jest.Mock).mockImplementation(() => ({
-      calculateNetPresentValue: jest.fn().mockResolvedValue(mockResponseDto),
-    }));
+    vi.spyOn(NetPresentValueApiClient.prototype, 'calculateNetPresentValue')
+      .mockResolvedValue(mockResponseDto);
   });
 
-  it('should correctly calculate NPVs using model and mappers', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('calculates NPV using API client and maps result', async () => {
     const { result } = renderHook(() => useNetPresentValueCalculation());
 
     let output;
     await act(async () => {
-      output = await result.current.calculate(mockInputModel);
+      output = await result.current.calculate(mockModel);
     });
 
-    expect(npvModelToRequestDto).toHaveBeenCalledWith(mockInputModel);
-
-    const apiInstance = (NetPresentValueApiClient as jest.Mock).mock.instances[0];
-    expect(apiInstance.calculateNetPresentValue).toHaveBeenCalledWith(mockRequestDto);
-
-    expect(npvResponseDtoToResultModel).toHaveBeenCalledWith(mockResponseDto);
+    expect(requestMapper.npvModelToRequestDto).toHaveBeenCalledWith(mockModel);
+    expect(NetPresentValueApiClient.prototype.calculateNetPresentValue).toHaveBeenCalledWith(mockRequestDto);
+    expect(responseMapper.npvResponseDtoToResultModel).toHaveBeenCalledWith(mockResponseDto);
     expect(output).toEqual(mockResultModel);
   });
 });

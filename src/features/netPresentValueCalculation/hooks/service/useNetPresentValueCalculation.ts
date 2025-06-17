@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import type { NetPresentValueCalculationModel } from '../../models/NetPresentValueCalculationModel';
 import type { NetPresentValueCalculationResultModel } from '../../models/NetPresentValueCalculationResultModel';
 import { npvModelToRequestDto } from '../../mappers/npvModelToRequestDto';
-import { NetPresentValueApiClient } from '../../api/clients/netPresentValueApiClient';
+import { NetPresentValueApiClient } from '../../api/clients/NetPresentValueApiClient';
 import { npvResponseDtoToResultModel } from '../../mappers/npvResponseDtoToResultModel';
 
 export const useNetPresentValueCalculation = () => {
