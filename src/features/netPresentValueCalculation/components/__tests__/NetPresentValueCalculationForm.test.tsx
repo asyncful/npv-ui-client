@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NetPresentValueCalculationForm } from '../NetPresentValueCalculationForm';
 import * as hook from '../../hooks/form/useNetPresentValueCalculationForm';
 
-describe('NetPresentValueCalculationForm', () => {
+describe('NetPresentValueCalculationForm tests', () => {
   const setForm = vi.fn();
   const mockHandleChange = vi.fn();
   const mockHandleSubmit = vi.fn();
@@ -77,7 +77,7 @@ describe('NetPresentValueCalculationForm', () => {
     expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
   });
 
-  it('displays results when available', async () => {
+  it('displays results when available', () => {
     const results = [
       { discountRate: 0.01, netPresentValue: 123.45 },
       { discountRate: 0.02, netPresentValue: 110.5 },
@@ -91,8 +91,9 @@ describe('NetPresentValueCalculationForm', () => {
     render(<NetPresentValueCalculationForm />);
 
     expect(screen.getByText(/calculation results/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/discount rate/i)).toHaveLength(2);
-    expect(screen.getByText(/npv: 123.45/i)).toBeInTheDocument();
-    expect(screen.getByText(/npv: 110.50/i)).toBeInTheDocument();
+    expect(screen.getByText('1.00%')).toBeInTheDocument();
+    expect(screen.getByText('123.45')).toBeInTheDocument();
+    expect(screen.getByText('2.00%')).toBeInTheDocument();
+    expect(screen.getByText('110.50')).toBeInTheDocument();
   });
 });

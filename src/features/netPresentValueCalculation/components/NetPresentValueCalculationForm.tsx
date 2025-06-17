@@ -9,6 +9,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { useNetPresentValueCalculationForm } from '../hooks/form/useNetPresentValueCalculationForm';
+import { NetPresentValueResultDisplay } from './NetPresentValueResultDisplay';
 
 export const NetPresentValueCalculationForm: React.FC = () => {
   const {
@@ -77,7 +78,6 @@ export const NetPresentValueCalculationForm: React.FC = () => {
             />
           </Grid>
 
-          {/* Submit Button */}
           <Grid item xs={12}>
             <Button
               fullWidth
@@ -90,7 +90,6 @@ export const NetPresentValueCalculationForm: React.FC = () => {
             </Button>
           </Grid>
 
-          {/* Error Message */}
           {error && (
             <Grid item xs={12}>
               <Typography color="error">{error}</Typography>
@@ -99,26 +98,7 @@ export const NetPresentValueCalculationForm: React.FC = () => {
         </Grid>
       </Paper>
 
-      {/* NPV Results */}
-      {result && result.length > 0 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Calculation Results
-          </Typography>
-          <Grid container spacing={2}>
-            {result.map((item, idx) => (
-              <Grid item xs={12} sm={6} md={4} key={idx}>
-                <Paper elevation={2} sx={{ p: 2 }}>
-                  <Typography variant="subtitle1">
-                    Discount Rate: {(item.discountRate * 100).toFixed(2)}%
-                  </Typography>
-                  <Typography variant="body1">NPV: {item.netPresentValue.toFixed(2)}</Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+      <NetPresentValueResultDisplay results={result ?? []} />
     </Box>
   );
 };
