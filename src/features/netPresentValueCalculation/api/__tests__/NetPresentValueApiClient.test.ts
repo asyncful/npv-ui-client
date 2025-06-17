@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NetPresentValueApiClient } from '../clients/NetPresentValueApiClient';
 
-// Mocked DTOs
 const mockRequest = {
   CashFlows: [100, 200, 300],
   DiscountRateDetails: {
@@ -30,16 +29,13 @@ describe('NetPresentValueApiClient tests', () => {
   });
 
   it('sends a POST request and returns parsed response on success', async () => {
-    // Arrange
     (fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     });
 
-    // Act
     const result = await apiClient.calculateNetPresentValue(mockRequest);
 
-    // Assert
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch).toHaveBeenCalledWith('http://localhost:7006/api/npv/calculate', {
       method: 'POST',
@@ -50,17 +46,51 @@ describe('NetPresentValueApiClient tests', () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it('throws an error if response is not ok', async () => {
-    // Arrange
+  it('throws default error when response is not ok and has no detail', async () => {
     (fetch as any).mockResolvedValueOnce({
       ok: false,
       status: 500,
       json: async () => ({}),
     });
 
-    // Act & Assert
     await expect(apiClient.calculateNetPresentValue(mockRequest)).rejects.toThrow(
       'Failed to calculate net present value'
     );
+  });
+
+  it('throws custom error message from error response detail field', async () => {
+    const errorDetail = 'There should be at least one cash flow.';
+    (fetch as any).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        title: 'Validation error',
+        status: 400,
+        detail: errorDetail,
+        instance: 'npv/calculate',
+      }),
+    });
+
+    await expect(apiClient.calculateNetPresentValue(mockRequest)).rejects.toThrow(errorDetail);
+  });
+
+  it('throws default error if error response is not valid JSON', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    (fetch as any).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => {
+        throw new Error('Invalid JSON');
+      },
+    });
+
+    await expect(apiClient.calculateNetPresentValue(mockRequest)).rejects.toThrow(
+      'Failed to calculate net present value'
+    );
+
+    expect(consoleSpy).toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
   });
 });

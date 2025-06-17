@@ -17,7 +17,18 @@ export class NetPresentValueApiClient
         });
 
         if (!res.ok) {
-        throw new Error('Failed to calculate net present value');
+            let errorMessage = 'Failed to calculate net present value';
+
+            try {
+                const errorBody = await res.json();
+                if (errorBody.detail) {
+                    errorMessage = errorBody.detail;
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            throw new Error(errorMessage);
         }
 
         return await res.json();
