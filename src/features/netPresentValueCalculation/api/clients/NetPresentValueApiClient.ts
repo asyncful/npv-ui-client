@@ -5,7 +5,7 @@ export class NetPresentValueApiClient
 {
     private readonly baseUrl: string;
 
-    constructor(baseUrl: string = ' http://localhost:7006/api/npv') {
+    constructor(baseUrl: string = import.meta.env.VITE_NPV_API_BASE_URL) {
         this.baseUrl = baseUrl;
     }
 
